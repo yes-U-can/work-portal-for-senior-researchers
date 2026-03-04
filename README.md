@@ -119,3 +119,23 @@ Naver Mail notes:
 - Integration account state is stored per tenant.
 - Billing/paid plan logic is intentionally out of current scope.
 - Senior accessibility test protocol: `docs/09-senior-accessibility-usability-checklist.md`
+
+## Deployment status
+
+- GitHub repository: `https://github.com/yes-U-can/portal_sicp`
+- Vercel project: `portal_sicp` (connected to GitHub)
+- Last production build failure cause: missing `DATABASE_URL` and `ENCRYPTION_KEY` on Vercel.
+
+Before redeploying, set required Vercel env vars:
+
+- `DATABASE_URL`
+- `ENCRYPTION_KEY`
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
+- `GOOGLE_OAUTH_CLIENT_ID`
+- `GOOGLE_OAUTH_CLIENT_SECRET`
+- `BAND_CLIENT_ID`
+- `BAND_CLIENT_SECRET`
+- `BAND_REDIRECT_URI`
+- `GOOGLE_DRIVE_REDIRECT_URI`
+- `GOOGLE_GMAIL_REDIRECT_URI`
