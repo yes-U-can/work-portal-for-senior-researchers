@@ -122,14 +122,13 @@ Naver Mail notes:
 
 ## Deployment status
 
-- GitHub repository: `https://github.com/yes-U-can/portal_sicp`
+- GitHub repository: `https://github.com/yes-U-can/work-portal-for-senior-researchers`
 - Vercel project: `portal_sicp` (connected to GitHub)
-- Last production build failure cause: missing `DATABASE_URL` and `ENCRYPTION_KEY` on Vercel.
+- Neon project: `portal-sicp` (`raspy-voice-89571259`, region `aws-ap-southeast-1`)
+- `DATABASE_URL` and `ENCRYPTION_KEY` are configured on Vercel for `development` and `production`.
 
 Before redeploying, set required Vercel env vars:
 
-- `DATABASE_URL`
-- `ENCRYPTION_KEY`
 - `NEXTAUTH_URL`
 - `NEXTAUTH_SECRET`
 - `GOOGLE_OAUTH_CLIENT_ID`

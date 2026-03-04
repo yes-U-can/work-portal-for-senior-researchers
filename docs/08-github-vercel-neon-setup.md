@@ -10,10 +10,12 @@ Establish the default production pipeline:
 
 ## Current Linked State (2026-03-04)
 
-- GitHub repository: `https://github.com/yes-U-can/portal_sicp`
+- GitHub repository: `https://github.com/yes-U-can/work-portal-for-senior-researchers`
 - Vercel project: `portal_sicp` (scope: `sicps-projects`)
-- Vercel Git connection: linked to `yes-U-can/portal_sicp`
-- Current production deployment: build failed because required env vars were missing (`DATABASE_URL`, `ENCRYPTION_KEY`)
+- Vercel Git connection: linked to `yes-U-can/work-portal-for-senior-researchers`
+- Neon project: `portal-sicp` (`raspy-voice-89571259`, region `aws-ap-southeast-1`)
+- Vercel env status: `DATABASE_URL` and `ENCRYPTION_KEY` configured for `development` and `production`
+- Current production deployment retry should be triggered from Git push because local CLI upload hit free-tier API upload limits (`api-upload-free`)
 
 ## 1) GitHub Repository
 
@@ -34,7 +36,7 @@ Environment variable:
 ## 3) Vercel Project
 
 1. Create project: `portal_sicp` (already done).
-2. Connect Git repository (already done for `yes-U-can/portal_sicp`).
+2. Connect Git repository (already done for `yes-U-can/work-portal-for-senior-researchers`).
 2. Configure environment variables:
    - `DATABASE_URL`
    - `ENCRYPTION_KEY`
@@ -78,7 +80,7 @@ Required integration vars for first functional deploy:
 
 ## 6) Next Implementation Step
 
-1. Add missing Vercel env vars and re-run production deploy.
+1. Add remaining Vercel env vars (`NEXTAUTH_*`, BAND/Google integration vars) and re-run production deploy.
 2. Create Google OAuth credentials in Google Cloud Console and add redirect URIs.
 3. Register BAND app redirect URI to production domain.
 4. Harden connector operations: retries, audit logs, and rate limiting for integration routes.
