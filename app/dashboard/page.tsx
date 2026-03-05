@@ -7,9 +7,9 @@ import { getCurrentUser } from "@/lib/session";
 import { resolveTenantAccessForUser } from "@/lib/tenant-access";
 
 type DashboardPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     [key: string]: string | string[] | undefined;
-  };
+  }>;
 };
 
 type ModuleStatus = {
@@ -133,7 +133,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     }
   ];
 
-  const bandQuery = toSingleSearchParam(searchParams?.band);
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const bandQuery = toSingleSearchParam(resolvedSearchParams?.band);
 
   return (
     <main className="page-shell" id="main-content">
