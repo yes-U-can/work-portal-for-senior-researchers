@@ -17,6 +17,8 @@ const envSchema = z.object({
   BAND_TOKEN_URL: z.string().optional(),
   BAND_OAUTH_SCOPE: z.string().optional(),
   BAND_API_BASE_URL: z.string().optional(),
+  BAND_APP_REVIEW_STATUS: z.string().optional(),
+  BAND_REVIEW_MESSAGE_KO: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
   GOOGLE_OAUTH_AUTHORIZE_URL: z.string().optional(),
@@ -47,6 +49,8 @@ const raw = envSchema.parse({
   BAND_TOKEN_URL: process.env.BAND_TOKEN_URL,
   BAND_OAUTH_SCOPE: process.env.BAND_OAUTH_SCOPE,
   BAND_API_BASE_URL: process.env.BAND_API_BASE_URL,
+  BAND_APP_REVIEW_STATUS: process.env.BAND_APP_REVIEW_STATUS,
+  BAND_REVIEW_MESSAGE_KO: process.env.BAND_REVIEW_MESSAGE_KO,
   GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
   GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
   GOOGLE_OAUTH_AUTHORIZE_URL: process.env.GOOGLE_OAUTH_AUTHORIZE_URL,
@@ -77,6 +81,14 @@ function parseBoolean(value: string | undefined, defaultValue: boolean): boolean
   return defaultValue;
 }
 
+function parseBandReviewStatus(value: string | undefined): "PENDING_REVIEW" | "AVAILABLE" {
+  if (value?.trim().toUpperCase() === "AVAILABLE") {
+    return "AVAILABLE";
+  }
+
+  return "PENDING_REVIEW";
+}
+
 export const env = {
   ...raw,
   IS_PRODUCTION: raw.NODE_ENV === "production",
@@ -86,6 +98,10 @@ export const env = {
   BAND_TOKEN_URL: raw.BAND_TOKEN_URL ?? "https://auth.band.us/oauth2/token",
   BAND_OAUTH_SCOPE: raw.BAND_OAUTH_SCOPE ?? "read_profile read_band",
   BAND_API_BASE_URL: raw.BAND_API_BASE_URL ?? "https://openapi.band.us",
+  BAND_APP_REVIEW_STATUS: parseBandReviewStatus(raw.BAND_APP_REVIEW_STATUS),
+  BAND_REVIEW_MESSAGE_KO:
+    raw.BAND_REVIEW_MESSAGE_KO ??
+    "BAND 앱 키 발급 심사 중입니다. 심사 완료 후 BAND 연결 기능이 자동으로 활성화됩니다.",
   GOOGLE_OAUTH_AUTHORIZE_URL: raw.GOOGLE_OAUTH_AUTHORIZE_URL ?? "https://accounts.google.com/o/oauth2/v2/auth",
   GOOGLE_OAUTH_TOKEN_URL: raw.GOOGLE_OAUTH_TOKEN_URL ?? "https://oauth2.googleapis.com/token",
   GOOGLE_DRIVE_OAUTH_SCOPE:

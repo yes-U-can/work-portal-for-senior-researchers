@@ -2,37 +2,46 @@ import Link from "next/link";
 import { IntegrationProvider } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { getLatestIntegrationHealth } from "@/lib/integrations/account-store";
+import { getBandReadiness } from "@/lib/integrations/band-readiness";
 import { getCurrentUser } from "@/lib/session";
 import { resolveTenantAccessForUser } from "@/lib/tenant-access";
+
+type DashboardPageProps = {
+  searchParams?: {
+    [key: string]: string | string[] | undefined;
+  };
+};
 
 type ModuleStatus = {
   title: string;
   connectLabel: string;
   connectPath: string;
+  connectDisabled: boolean;
   workspacePath: string;
-  status: string;
-  connected: boolean;
+  statusLabel: string;
+  statusClassName: string;
   providerAccountId: string | null;
   updatedAt: Date | null;
+  helperText: string;
 };
 
-function statusText(status: string) {
+function statusLabel(status: string) {
   if (status === "CONNECTED") {
-    return "Connected";
+    return "연결 완료";
   }
 
   if (status === "NOT_CONNECTED") {
-    return "Not connected";
+    return "미연결";
   }
 
   if (status === "EXPIRED") {
-    return "Reconnect required";
+    return "재연결 필요";
   }
 
-  return "Error";
+  return "오류";
 }
 
-function statusClass(status: string) {
+function statusClassName(status: string) {
   if (status === "CONNECTED") {
     return "state-connected";
   }
@@ -44,7 +53,19 @@ function statusClass(status: string) {
   return "state-error";
 }
 
-export default async function DashboardPage() {
+function toSingleSearchParam(value: string | string[] | undefined) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (Array.isArray(value) && value.length > 0) {
+    return value[0];
+  }
+
+  return "";
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/signin");
@@ -62,127 +83,148 @@ export default async function DashboardPage() {
     getLatestIntegrationHealth(access.tenantId, IntegrationProvider.NAVER_MAIL)
   ]);
 
+  const bandReadiness = getBandReadiness();
+  const bandAvailable = bandReadiness.availability === "AVAILABLE";
   const mailConnected = gmail.connected || naverMail.connected;
-  const completedSteps = Number(band.connected) + Number(drive.connected) + Number(mailConnected);
+
+  const totalSteps = bandAvailable ? 3 : 2;
+  const completedSteps =
+    Number(drive.connected) + Number(mailConnected) + (bandAvailable ? Number(band.connected) : 0);
+
+  const bandStatus = bandAvailable ? statusLabel(band.status) : "심사중 (연결 대기)";
+  const bandStatusClass = bandAvailable ? statusClassName(band.status) : "state-pending";
 
   const moduleStatuses: ModuleStatus[] = [
     {
-      title: "BAND",
-      connectLabel: "Connect BAND",
-      connectPath: "/api/integrations/band/connect",
-      workspacePath: "/band",
-      status: band.status,
-      connected: band.connected,
-      providerAccountId: band.providerAccountId,
-      updatedAt: band.updatedAt
-    },
-    {
       title: "Google Drive",
-      connectLabel: "Connect Drive",
+      connectLabel: "Drive 연결",
       connectPath: "/api/integrations/drive/connect",
+      connectDisabled: false,
       workspacePath: "/drive",
-      status: drive.status,
-      connected: drive.connected,
+      statusLabel: statusLabel(drive.status),
+      statusClassName: statusClassName(drive.status),
       providerAccountId: drive.providerAccountId,
-      updatedAt: drive.updatedAt
+      updatedAt: drive.updatedAt,
+      helperText: "연구 파일 검색과 업로드를 먼저 준비하세요."
     },
     {
-      title: "Gmail",
-      connectLabel: "Connect Gmail",
-      connectPath: "/api/integrations/gmail/connect",
-      workspacePath: "/mail",
-      status: gmail.status,
-      connected: gmail.connected,
-      providerAccountId: gmail.providerAccountId,
-      updatedAt: gmail.updatedAt
-    },
-    {
-      title: "Personal Naver Mail (IMAP)",
-      connectLabel: "Connect Naver Mail",
+      title: "메일 (Gmail / 개인 네이버메일)",
+      connectLabel: "메일 연결",
       connectPath: "/mail",
+      connectDisabled: false,
       workspacePath: "/mail",
-      status: naverMail.status,
-      connected: naverMail.connected,
-      providerAccountId: naverMail.providerAccountId,
-      updatedAt: naverMail.updatedAt
+      statusLabel: mailConnected ? "연결 완료" : "미연결",
+      statusClassName: mailConnected ? "state-connected" : "state-pending",
+      providerAccountId: gmail.providerAccountId ?? naverMail.providerAccountId,
+      updatedAt: gmail.updatedAt ?? naverMail.updatedAt,
+      helperText: "Gmail 또는 개인 네이버메일 중 하나만 먼저 연결해도 됩니다."
+    },
+    {
+      title: "BAND",
+      connectLabel: bandAvailable ? "BAND 연결" : "심사중",
+      connectPath: bandAvailable ? "/api/integrations/band/connect" : "/band",
+      connectDisabled: !bandAvailable,
+      workspacePath: "/band",
+      statusLabel: bandStatus,
+      statusClassName: bandStatusClass,
+      providerAccountId: band.providerAccountId,
+      updatedAt: band.updatedAt,
+      helperText: bandReadiness.availabilityMessage
     }
   ];
+
+  const bandQuery = toSingleSearchParam(searchParams?.band);
 
   return (
     <main className="page-shell" id="main-content">
       <header className="heading-row">
         <div>
-          <h1 className="page-title">Connection Dashboard</h1>
+          <h1 className="page-title">업무 포털 대시보드</h1>
           <p className="page-subtitle">
-            Signed in as <strong>{user.email}</strong>
+            로그인 계정: <strong>{user.email}</strong>
           </p>
         </div>
         <div className="actions-row">
           <Link className="button-secondary" href="/accessibility-checklist">
-            Accessibility Checklist
+            접근성 체크리스트
           </Link>
           <Link className="button-secondary" href="/api/auth/signout">
-            Sign out
+            로그아웃
           </Link>
         </div>
       </header>
 
-      <section className="section-stack section" aria-label="Quick setup">
+      {bandQuery === "pending_review" ? (
+        <section className="section surface-card surface-card-soft">
+          <div className="card-body section-stack">
+            <p className="state-text state-pending">BAND 연동은 현재 심사중입니다.</p>
+            <p className="card-text">{bandReadiness.availabilityMessage}</p>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="section-stack section" aria-label="빠른 시작">
         <article className="surface-card">
           <div className="card-body section-stack">
-            <h2 className="card-title">Quick setup in 3 steps</h2>
+            <h2 className="card-title">빠른 시작 (Drive → Mail 우선)</h2>
             <div className="progress-panel" role="status" aria-live="polite">
               <p className="progress-number">
-                {completedSteps} / 3 steps completed
+                {completedSteps} / {totalSteps} 단계 완료
               </p>
               <p className="card-text">
-                Step 1: BAND. Step 2: Google Drive. Step 3: Mail (Gmail or personal Naver Mail).
+                1단계 Drive 연결, 2단계 메일 연결을 먼저 완료하세요. BAND는 심사 완료 후 자동으로 활성화됩니다.
               </p>
             </div>
 
             <div className="setup-grid">
               <article className="setup-step">
-                <p className="setup-step-title">Step 1: Connect BAND</p>
-                <p className="setup-step-desc">Open BAND posts and comments from one place.</p>
-                <p className={`state-text ${statusClass(band.status)}`}>{statusText(band.status)}</p>
-                <div className="actions-row">
-                  <Link className="button" href="/api/integrations/band/connect">
-                    Connect BAND
-                  </Link>
-                  <Link className="button-secondary" href="/band">
-                    Open BAND page
-                  </Link>
-                </div>
-              </article>
-
-              <article className="setup-step">
-                <p className="setup-step-title">Step 2: Connect Drive</p>
-                <p className="setup-step-desc">Search and upload research files from this portal.</p>
-                <p className={`state-text ${statusClass(drive.status)}`}>{statusText(drive.status)}</p>
+                <p className="setup-step-title">1단계: Google Drive 연결</p>
+                <p className="setup-step-desc">파일 검색과 업로드를 위해 Drive를 먼저 연결합니다.</p>
+                <p className={`state-text ${statusClassName(drive.status)}`}>{statusLabel(drive.status)}</p>
                 <div className="actions-row">
                   <Link className="button" href="/api/integrations/drive/connect">
-                    Connect Drive
+                    Drive 연결 시작
                   </Link>
                   <Link className="button-secondary" href="/drive">
-                    Open Drive page
+                    Drive 화면 열기
                   </Link>
                 </div>
               </article>
 
               <article className="setup-step">
-                <p className="setup-step-title">Step 3: Connect Mail</p>
+                <p className="setup-step-title">2단계: 메일 연결</p>
                 <p className="setup-step-desc">
-                  Connect either Gmail or personal Naver Mail first.
+                  Gmail 또는 개인 네이버메일 중 하나만 먼저 연결해도 최근 메일 확인이 가능합니다.
                 </p>
                 <p className={`state-text ${mailConnected ? "state-connected" : "state-pending"}`}>
-                  {mailConnected ? "Connected" : "Not connected"}
+                  {mailConnected ? "연결 완료" : "미연결"}
                 </p>
                 <div className="actions-row">
-                  <Link className="button" href="/api/integrations/gmail/connect">
-                    Connect Gmail
+                  <Link className="button" href="/mail">
+                    메일 연결 시작
                   </Link>
                   <Link className="button-secondary" href="/mail">
-                    Connect Naver Mail
+                    메일 화면 열기
+                  </Link>
+                </div>
+              </article>
+
+              <article className="setup-step">
+                <p className="setup-step-title">3단계: BAND 연결</p>
+                <p className="setup-step-desc">{bandReadiness.availabilityMessage}</p>
+                <p className={`state-text ${bandStatusClass}`}>{bandStatus}</p>
+                <div className="actions-row">
+                  {bandAvailable ? (
+                    <Link className="button" href="/api/integrations/band/connect">
+                      BAND 연결 시작
+                    </Link>
+                  ) : (
+                    <span className="button-disabled" aria-disabled="true">
+                      BAND 심사중
+                    </span>
+                  )}
+                  <Link className="button-secondary" href="/band">
+                    BAND 화면 열기
                   </Link>
                 </div>
               </article>
@@ -190,24 +232,31 @@ export default async function DashboardPage() {
           </div>
         </article>
 
-        <section className="status-grid" aria-label="Detailed integration status">
+        <section className="status-grid" aria-label="연동 상태 상세">
           {moduleStatuses.map((module) => (
             <article className="surface-card" key={module.title}>
               <div className="card-body section-stack">
                 <div>
                   <h3 className="card-title">{module.title}</h3>
-                  <p className={`state-text ${statusClass(module.status)}`}>{statusText(module.status)}</p>
-                  <p className="status-meta">Account: {module.providerAccountId ?? "Not connected"}</p>
+                  <p className={`state-text ${module.statusClassName}`}>{module.statusLabel}</p>
+                  <p className="status-meta">계정: {module.providerAccountId ?? "연결 전"}</p>
                   <p className="status-meta">
-                    Last update: {module.updatedAt ? new Date(module.updatedAt).toLocaleString("ko-KR") : "-"}
+                    마지막 업데이트: {module.updatedAt ? new Date(module.updatedAt).toLocaleString("ko-KR") : "-"}
                   </p>
+                  <p className="status-meta">{module.helperText}</p>
                 </div>
                 <div className="actions-row">
-                  <Link className="button" href={module.connectPath}>
-                    {module.connectLabel}
-                  </Link>
+                  {module.connectDisabled ? (
+                    <span className="button-disabled" aria-disabled="true">
+                      {module.connectLabel}
+                    </span>
+                  ) : (
+                    <Link className="button" href={module.connectPath}>
+                      {module.connectLabel}
+                    </Link>
+                  )}
                   <Link className="button-secondary" href={module.workspacePath}>
-                    Open page
+                    화면 열기
                   </Link>
                 </div>
               </div>

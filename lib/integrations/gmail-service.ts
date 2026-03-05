@@ -1,3 +1,4 @@
+import { ConnectorError } from "@/lib/integrations/connector-error";
 import type { MailMessageDetail, MailMessageSummary } from "@/lib/integrations/types";
 
 type GmailMessageListResponse = {
@@ -66,6 +67,34 @@ function mapMessage(data: GmailMessageResponse): MailMessageSummary {
   };
 }
 
+function throwGmailError(status: number, action: "list" | "detail"): never {
+  if (status === 401 || status === 403) {
+    throw new ConnectorError(
+      "Gmail 권한이 만료되었거나 승인되지 않았습니다.",
+      "대시보드에서 Gmail을 다시 연결한 뒤 목록을 새로고침하세요."
+    );
+  }
+
+  if (status === 429) {
+    throw new ConnectorError(
+      "Gmail 요청이 잠시 많아 처리되지 않았습니다.",
+      "잠시 후 다시 시도하세요."
+    );
+  }
+
+  if (action === "detail") {
+    throw new ConnectorError(
+      `메일 상세를 불러오지 못했습니다. (${status})`,
+      "목록을 새로고침한 뒤 메일을 다시 선택하세요."
+    );
+  }
+
+  throw new ConnectorError(
+    `Gmail 목록을 불러오지 못했습니다. (${status})`,
+    "Gmail 연결 상태를 확인한 뒤 다시 시도하세요."
+  );
+}
+
 export async function getGmailMessage(accessToken: string, messageId: string): Promise<MailMessageDetail> {
   const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}`);
   url.searchParams.set("format", "metadata");
@@ -79,8 +108,7 @@ export async function getGmailMessage(accessToken: string, messageId: string): P
   });
 
   if (!response.ok) {
-    const payload = await response.text();
-    throw new Error(`Gmail message load failed (${response.status}): ${payload}`);
+    throwGmailError(response.status, "detail");
   }
 
   const message = (await response.json()) as GmailMessageResponse;
@@ -105,8 +133,7 @@ export async function listGmailMessages(input: ListGmailMessagesInput): Promise<
   });
 
   if (!listResponse.ok) {
-    const payload = await listResponse.text();
-    throw new Error(`Gmail message list failed (${listResponse.status}): ${payload}`);
+    throwGmailError(listResponse.status, "list");
   }
 
   const listData = (await listResponse.json()) as GmailMessageListResponse;

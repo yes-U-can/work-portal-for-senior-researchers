@@ -1,6 +1,7 @@
 import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
 
 export type MailProvider = "GMAIL" | "NAVER_MAIL";
+export type BandAvailability = "PENDING_REVIEW" | "AVAILABLE";
 
 export type IntegrationHealth = {
   provider: IntegrationProvider;
@@ -8,6 +9,11 @@ export type IntegrationHealth = {
   status: IntegrationStatus | "NOT_CONNECTED";
   providerAccountId: string | null;
   updatedAt: Date | null;
+};
+
+export type RecoveryGuidance = {
+  message: string;
+  recoveryAction: string;
 };
 
 export type MailMessageSummary = {

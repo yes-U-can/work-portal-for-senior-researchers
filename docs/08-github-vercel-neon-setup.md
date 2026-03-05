@@ -16,6 +16,7 @@ Establish the default production pipeline:
 - Neon project: `portal-sicp` (`raspy-voice-89571259`, region `aws-ap-southeast-1`)
 - Vercel env status: `DATABASE_URL` and `ENCRYPTION_KEY` configured for `development` and `production`
 - Current production deployment retry should be triggered from Git push because local CLI upload hit free-tier API upload limits (`api-upload-free`)
+- BAND app registration status: client key issuance under review (BAND connect kept in pending mode)
 
 ## 1) GitHub Repository
 
@@ -44,6 +45,8 @@ Environment variable:
    - `NEXTAUTH_SECRET`
    - `GOOGLE_OAUTH_CLIENT_ID`
    - `GOOGLE_OAUTH_CLIENT_SECRET`
+   - `BAND_APP_REVIEW_STATUS` (`PENDING_REVIEW` while waiting for approval)
+   - `BAND_REVIEW_MESSAGE_KO` (optional user guidance text)
    - `BAND_CLIENT_ID`
    - `BAND_CLIENT_SECRET`
    - `DEV_AUTH_EMAIL` (preview/dev only)
@@ -53,6 +56,8 @@ Environment variable:
 Required integration vars for first functional deploy:
 
 - BAND
+  - `BAND_APP_REVIEW_STATUS` = `PENDING_REVIEW` (default) or `AVAILABLE`
+  - `BAND_REVIEW_MESSAGE_KO` (optional)
   - `BAND_CLIENT_ID`
   - `BAND_CLIENT_SECRET`
   - `BAND_REDIRECT_URI` = `https://<your-domain>/api/integrations/band/callback`
@@ -80,7 +85,7 @@ Required integration vars for first functional deploy:
 
 ## 6) Next Implementation Step
 
-1. Add remaining Vercel env vars (`NEXTAUTH_*`, BAND/Google integration vars) and re-run production deploy.
-2. Create Google OAuth credentials in Google Cloud Console and add redirect URIs.
-3. Register BAND app redirect URI to production domain.
-4. Harden connector operations: retries, audit logs, and rate limiting for integration routes.
+1. Keep `BAND_APP_REVIEW_STATUS=PENDING_REVIEW` until BAND approval arrives.
+2. Keep polishing senior onboarding for Drive/Mail while BAND is pending.
+3. After BAND approval, set `BAND_APP_REVIEW_STATUS=AVAILABLE` + BAND client keys.
+4. Re-run production smoke tests including BAND connect flow.

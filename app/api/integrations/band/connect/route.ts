@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { hasRoleOrAbove } from "@/lib/authorization";
 import { env } from "@/lib/env";
+import { getBandReadiness } from "@/lib/integrations/band-readiness";
 import { getBandAuthorizeUrl, getBandClientId, getBandScope } from "@/lib/integrations/band-oauth";
 import { getCurrentUser } from "@/lib/session";
 import { resolveTenantAccessForUser } from "@/lib/tenant-access";
@@ -16,6 +17,11 @@ export async function GET(request: NextRequest) {
   const access = await resolveTenantAccessForUser(user);
   if (!access || !hasRoleOrAbove(access.role, Role.ADMIN)) {
     return NextResponse.json({ error: "Integration admin role is required." }, { status: 403 });
+  }
+
+  const readiness = getBandReadiness();
+  if (!readiness.readyForOAuth) {
+    return NextResponse.redirect(new URL("/dashboard?band=pending_review", request.url));
   }
 
   const clientId = getBandClientId();

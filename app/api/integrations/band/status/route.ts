@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { IntegrationProvider } from "@prisma/client";
 import { getLatestIntegrationHealth } from "@/lib/integrations/account-store";
+import { getBandReadiness } from "@/lib/integrations/band-readiness";
 import { getCurrentUser } from "@/lib/session";
 import { resolveTenantAccessForUser } from "@/lib/tenant-access";
 
@@ -16,5 +17,11 @@ export async function GET() {
   }
 
   const health = await getLatestIntegrationHealth(access.tenantId, IntegrationProvider.BAND);
-  return NextResponse.json(health);
+  const readiness = getBandReadiness();
+
+  return NextResponse.json({
+    ...health,
+    availability: readiness.availability,
+    availabilityMessage: readiness.availabilityMessage
+  });
 }

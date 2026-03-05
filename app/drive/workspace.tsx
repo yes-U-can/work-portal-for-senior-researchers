@@ -19,6 +19,11 @@ type DriveFile = {
   owners: string[];
 };
 
+type ErrorPayload = {
+  error?: string;
+  recoveryAction?: string;
+};
+
 function statusLabel(status: DriveStatusResponse | null) {
   if (!status || !status.connected) {
     return "미연결";
@@ -32,7 +37,15 @@ function statusLabel(status: DriveStatusResponse | null) {
     return "재연결 필요";
   }
 
-  return status.status;
+  return "오류";
+}
+
+function readError(payload: unknown, fallbackError: string, fallbackRecoveryAction: string) {
+  const parsed = payload as ErrorPayload;
+  return {
+    error: parsed?.error || fallbackError,
+    recoveryAction: parsed?.recoveryAction || fallbackRecoveryAction
+  };
 }
 
 export default function DriveWorkspace() {
@@ -42,19 +55,30 @@ export default function DriveWorkspace() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [errorRecoveryAction, setErrorRecoveryAction] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
   async function loadStatus() {
     const response = await fetch("/api/integrations/drive/status");
     const data = await response.json();
-    if (response.ok) {
-      setStatus(data);
+    if (!response.ok) {
+      const guidance = readError(
+        data,
+        "Drive 연결 상태를 확인하지 못했습니다.",
+        "잠시 후 상태 다시 확인 버튼을 눌러주세요."
+      );
+      setError(guidance.error);
+      setErrorRecoveryAction(guidance.recoveryAction);
+      return;
     }
+
+    setStatus(data);
   }
 
   async function loadFiles(search?: string) {
     setLoading(true);
     setError("");
+    setErrorRecoveryAction("");
     setSuccessMessage("");
 
     const params = new URLSearchParams();
@@ -67,7 +91,13 @@ export default function DriveWorkspace() {
     setLoading(false);
 
     if (!response.ok) {
-      setError(data.error ?? "파일 목록을 불러오지 못했습니다.");
+      const guidance = readError(
+        data,
+        "파일 목록을 불러오지 못했습니다.",
+        "대시보드에서 Drive 재연결을 시도한 뒤 다시 불러오세요."
+      );
+      setError(guidance.error);
+      setErrorRecoveryAction(guidance.recoveryAction);
       setFiles([]);
       return;
     }
@@ -92,11 +122,13 @@ export default function DriveWorkspace() {
     const file = formData.get("file");
     if (!(file instanceof File)) {
       setError("업로드할 파일을 먼저 선택하세요.");
+      setErrorRecoveryAction("파일 선택 버튼에서 파일을 고른 뒤 다시 업로드하세요.");
       return;
     }
 
     setUploading(true);
     setError("");
+    setErrorRecoveryAction("");
     setSuccessMessage("");
 
     const response = await fetch("/api/integrations/drive/upload", {
@@ -107,7 +139,13 @@ export default function DriveWorkspace() {
     setUploading(false);
 
     if (!response.ok) {
-      setError(data.error ?? "파일 업로드에 실패했습니다.");
+      const guidance = readError(
+        data,
+        "파일 업로드에 실패했습니다.",
+        "Drive 연결 상태를 확인한 뒤 다시 업로드하세요."
+      );
+      setError(guidance.error);
+      setErrorRecoveryAction(guidance.recoveryAction);
       return;
     }
 
@@ -144,6 +182,9 @@ export default function DriveWorkspace() {
             <Link className="button" href="/api/integrations/drive/connect">
               Google Drive 연결
             </Link>
+            <button className="button-secondary" type="button" onClick={() => void loadStatus()}>
+              상태 다시 확인
+            </button>
             <button className="button-secondary" type="button" onClick={() => void loadFiles(query)}>
               목록 새로고침
             </button>
@@ -170,7 +211,7 @@ export default function DriveWorkspace() {
               {loading ? "검색 중..." : "검색"}
             </button>
           </form>
-          <p className="hint">공유드라이브 검색 경로도 기본으로 활성화되어 있습니다.</p>
+          <p className="hint">공유 드라이브 검색 경로도 기본으로 활성화되어 있습니다.</p>
         </div>
       </section>
 
@@ -220,6 +261,7 @@ export default function DriveWorkspace() {
 
       <div className="live-region" aria-live="polite" role="status">
         {error ? <p className="error-text">{error}</p> : null}
+        {errorRecoveryAction ? <p className="hint hint-recovery">{errorRecoveryAction}</p> : null}
         {successMessage ? <p className="success-text">{successMessage}</p> : null}
       </div>
     </div>

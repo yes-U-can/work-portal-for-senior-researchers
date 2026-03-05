@@ -1,5 +1,6 @@
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
+import { ConnectorError } from "@/lib/integrations/connector-error";
 import type { MailMessageDetail, MailMessageSummary } from "@/lib/integrations/types";
 import { env } from "@/lib/env";
 
@@ -39,21 +40,51 @@ function parseSingleAddress(addresses: Array<{ name?: string | null; address?: s
   return first ?? "Unknown sender";
 }
 
-function mapNaverImapError(error: unknown): string {
+function mapNaverImapError(error: unknown): ConnectorError {
   if (!(error instanceof Error)) {
-    return "Failed to connect to Naver Mail IMAP.";
+    return new ConnectorError(
+      "네이버메일 IMAP 연결에 실패했습니다.",
+      "잠시 후 다시 시도하세요."
+    );
   }
 
   const message = error.message.toLowerCase();
-  if (message.includes("authentication") || message.includes("login")) {
-    return "Authentication failed. Check your Naver Mail app password.";
+  if (
+    message.includes("authentication") ||
+    message.includes("login failed") ||
+    message.includes("invalid credentials")
+  ) {
+    return new ConnectorError(
+      "네이버메일 인증에 실패했습니다.",
+      "네이버 2단계 인증을 켠 뒤 앱 비밀번호를 새로 발급해 입력하세요."
+    );
   }
 
   if (message.includes("timeout")) {
-    return "IMAP connection timed out. Please try again.";
+    return new ConnectorError(
+      "네이버메일 서버 연결 시간이 초과되었습니다.",
+      "네트워크 상태를 확인한 뒤 잠시 후 다시 시도하세요."
+    );
   }
 
-  return error.message;
+  if (message.includes("imap") && (message.includes("disabled") || message.includes("not enabled"))) {
+    return new ConnectorError(
+      "네이버메일 IMAP 사용이 비활성화되어 있습니다.",
+      "네이버 메일 설정에서 IMAP 허용을 켠 뒤 다시 연결하세요."
+    );
+  }
+
+  if (message.includes("application-specific password")) {
+    return new ConnectorError(
+      "앱 비밀번호가 필요합니다.",
+      "일반 비밀번호 대신 네이버 앱 비밀번호를 입력하세요."
+    );
+  }
+
+  return new ConnectorError(
+    "네이버메일 연결 중 오류가 발생했습니다.",
+    "앱 비밀번호를 다시 발급한 뒤 다시 시도하세요."
+  );
 }
 
 async function withNaverImapClient<T>(auth: NaverImapAuth, task: (client: ImapFlow) => Promise<T>): Promise<T> {
@@ -71,7 +102,7 @@ async function withNaverImapClient<T>(auth: NaverImapAuth, task: (client: ImapFl
     await client.connect();
     return await task(client);
   } catch (error) {
-    throw new Error(mapNaverImapError(error));
+    throw mapNaverImapError(error);
   } finally {
     try {
       await client.logout();
@@ -140,7 +171,10 @@ export async function getNaverMailMessage(auth: NaverImapAuth, uid: number): Pro
     );
 
     if (!message) {
-      throw new Error("Message not found.");
+      throw new ConnectorError(
+        "선택한 메일을 찾지 못했습니다.",
+        "메일 목록을 새로고침한 뒤 다시 선택하세요."
+      );
     }
 
     const parsed = message.source ? await simpleParser(message.source) : null;

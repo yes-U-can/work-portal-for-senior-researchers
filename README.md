@@ -31,8 +31,6 @@ Set required values in `.env`:
 - `NEXTAUTH_SECRET`
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
-- `BAND_CLIENT_ID`
-- `BAND_CLIENT_SECRET`
 
 Optional development values:
 
@@ -40,6 +38,11 @@ Optional development values:
 - `DEV_AUTH_PASSWORD`
 - `ACTIVE_TENANT_SLUG`
 - `DEV_AUTO_PROVISION`
+- `BAND_APP_REVIEW_STATUS` (`PENDING_REVIEW` | `AVAILABLE`, default: `PENDING_REVIEW`)
+- `BAND_REVIEW_MESSAGE_KO` (BAND 심사대기 안내 문구)
+- `BAND_CLIENT_ID` (BAND 심사 완료 후)
+- `BAND_CLIENT_SECRET` (BAND 심사 완료 후)
+- `BAND_REDIRECT_URI` (BAND 심사 완료 후)
 - `NAVER_IMAP_HOST`
 - `NAVER_IMAP_PORT`
 - `NAVER_IMAP_SECURE`
@@ -79,10 +82,16 @@ Open:
 
 - `GET /api/integrations/band/connect`
 - `GET /api/integrations/band/callback`
-- `GET /api/integrations/band/status`
+- `GET /api/integrations/band/status` (`availability`, `availabilityMessage` 포함)
 - `GET /api/integrations/band/bands`
 - `GET /api/integrations/band/posts?bandKey=...`
 - `GET /api/integrations/band/comments?bandKey=...&postKey=...`
+
+BAND 심사 대기 모드:
+
+- `BAND_APP_REVIEW_STATUS=PENDING_REVIEW`일 때 `/api/integrations/band/connect`는 OAuth로 이동하지 않고
+  대시보드 안내 화면으로 이동합니다.
+- 이 모드에서도 Drive/Gmail/Naver Mail은 정상 사용 가능합니다.
 
 ### Google Drive
 
@@ -119,6 +128,7 @@ Naver Mail notes:
 - Integration account state is stored per tenant.
 - Billing/paid plan logic is intentionally out of current scope.
 - Senior accessibility test protocol: `docs/09-senior-accessibility-usability-checklist.md`
+- Connector 오류 응답은 `error` + `recoveryAction` 형식을 기본으로 제공합니다.
 
 ## Deployment status
 
@@ -133,8 +143,12 @@ Before redeploying, set required Vercel env vars:
 - `NEXTAUTH_SECRET`
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
+- `GOOGLE_DRIVE_REDIRECT_URI`
+- `GOOGLE_GMAIL_REDIRECT_URI`
+
+Set BAND vars after BAND app review is approved:
+
+- `BAND_APP_REVIEW_STATUS=AVAILABLE`
 - `BAND_CLIENT_ID`
 - `BAND_CLIENT_SECRET`
 - `BAND_REDIRECT_URI`
-- `GOOGLE_DRIVE_REDIRECT_URI`
-- `GOOGLE_GMAIL_REDIRECT_URI`

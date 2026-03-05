@@ -12,7 +12,7 @@ export default async function BandPage() {
     <main className="page-shell" id="main-content">
       <h1 className="page-title">BAND 연결 화면</h1>
       <p className="page-subtitle">
-        연결된 BAND에서 밴드, 게시글, 댓글을 확인합니다. 먼저 대시보드에서 BAND 연결을 완료하세요.
+        BAND 심사 상태를 먼저 확인한 뒤, 연결 가능 상태에서 밴드/게시글/댓글을 확인할 수 있습니다.
       </p>
       <BandWorkspace />
     </main>

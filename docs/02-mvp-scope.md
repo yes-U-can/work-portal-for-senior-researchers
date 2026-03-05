@@ -30,6 +30,7 @@ for a tenant-aware, senior-friendly dashboard.
 ### Integrations
 
 - BAND: connect, status, list bands/posts/comments
+  - During app review wait: expose `PENDING_REVIEW` status and keep connect flow in 안내 모드
 - Google Drive: connect, status, list/search files, upload file
 - Gmail: connect, status, list message metadata, load message preview
 - Personal Naver Mail: connect via IMAP app password, status, list message metadata, load preview
@@ -50,7 +51,8 @@ for a tenant-aware, senior-friendly dashboard.
 
 ## MVP Success Criteria
 
-1. A tenant admin can connect BAND, Google Drive, Gmail, and personal Naver Mail in under 10 minutes.
+1. A tenant admin can connect Google Drive, Gmail, and personal Naver Mail in under 10 minutes.
+   - If BAND is pending review, the user must still understand BAND is waiting for approval (not a failure).
 2. A user can check latest BAND content, key drive files, and recent mail from one screen.
 3. No tokens, secrets, or app passwords are exposed in client-side code.
 4. Tenant boundaries are enforced across integration routes.

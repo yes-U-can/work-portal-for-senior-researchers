@@ -32,6 +32,15 @@ Optional capabilities for providers that support scheduling or writeback:
 - Band list, post list, comment list APIs
 - Workspace UI at `/band`
 
+### Review Waiting Mode
+
+- `BAND_APP_REVIEW_STATUS=PENDING_REVIEW` is the default safety mode.
+- `GET /api/integrations/band/status` returns availability metadata:
+  - `availability: "PENDING_REVIEW" | "AVAILABLE"`
+  - `availabilityMessage: string`
+- `GET /api/integrations/band/connect` redirects to dashboard 안내 when availability is pending.
+- Production OAuth activation starts only after app approval and key provisioning.
+
 ### Guardrails
 
 - Avoid full-content mirroring
@@ -90,3 +99,10 @@ Optional capabilities for providers that support scheduling or writeback:
 - Per-tenant integration account records
 - Tokens and app passwords encrypted at rest
 - Credential values never returned to browser payloads
+
+## Error Response Contract
+
+- Integration APIs should return:
+  - `error`: user-visible failure reason
+  - `recoveryAction`: explicit next step for recovery
+- UI must show both fields in live region when available.

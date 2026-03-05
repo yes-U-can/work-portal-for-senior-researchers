@@ -38,7 +38,7 @@ export default function SignInForm({ googleEnabled, credentialsEnabled }: SignIn
 
     setCredentialsLoading(false);
     if (!result || result.error) {
-      setError("Sign in failed. Check your credentials and try again.");
+      setError("로그인에 실패했습니다. 이메일/비밀번호를 다시 확인하고 재시도하세요.");
       return;
     }
 
@@ -48,6 +48,7 @@ export default function SignInForm({ googleEnabled, credentialsEnabled }: SignIn
   return (
     <section className="surface-card form-card">
       <div className="card-body form-grid">
+        <p className="hint hint-strong">처음 이용 시 Google 로그인으로 시작하는 것을 권장합니다.</p>
         {googleEnabled ? (
           <button className="button" type="button" disabled={googleLoading} onClick={onGoogleSignIn}>
             {googleLoading ? "Google 로그인 화면으로 이동 중..." : "Google로 로그인"}

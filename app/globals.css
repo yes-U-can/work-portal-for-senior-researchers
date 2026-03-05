@@ -152,6 +152,7 @@ code {
 .button,
 .button-secondary,
 .button-danger,
+.button-disabled,
 .tab-button {
   display: inline-flex;
   align-items: center;
@@ -198,9 +199,17 @@ code {
   border-color: #edb8c5;
 }
 
+.button-disabled {
+  background: #eef2f8;
+  color: #6b7f9f;
+  border-color: #c9d5e7;
+  cursor: not-allowed;
+}
+
 .button:disabled,
 .button-secondary:disabled,
 .button-danger:disabled,
+.button-disabled:disabled,
 .tab-button:disabled {
   cursor: default;
   opacity: 0.66;
@@ -251,6 +260,11 @@ code {
 .hint-strong {
   color: #1f3554;
   font-weight: 700;
+}
+
+.hint-recovery {
+  color: #214d88;
+  font-weight: 600;
 }
 
 .state-text {

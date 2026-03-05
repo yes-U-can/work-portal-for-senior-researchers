@@ -4,9 +4,9 @@
 
 This checklist validates whether senior researchers can use core workflows independently:
 
-- Connect BAND
 - Connect Google Drive
 - Connect Gmail or personal Naver Mail
+- Understand BAND review waiting status (when app review is pending)
 - Read and act on key information without confusion
 
 This is a release gate. If users cannot complete tasks without help, the build is not ready.
@@ -19,15 +19,16 @@ This is a release gate. If users cannot complete tasks without help, the build i
 - Browser coverage: latest Chrome and Edge
 - Environment:
   - Real OAuth credentials configured
-  - At least one BAND account, one Drive account, one Gmail account
+  - At least one Drive account, one Gmail account
   - One personal Naver Mail account with IMAP app password ready
+  - If BAND review is still pending, use pending-mode scenarios (S2/S3-alt)
 
 ## Hard Pass Criteria
 
 1. Task completion rate >= 90%
 2. No-help completion rate >= 80%
 3. Critical confusion events = 0
-4. Average time for full setup (BAND + Drive + one mail) <= 10 minutes
+4. Average time for core setup (Drive + one mail) <= 10 minutes
 5. Keyboard-only run completes all tasks without dead-end focus traps
 
 ## Severity Rules
@@ -47,8 +48,8 @@ Release rule:
 | ID | Task | Route | Target Time | Pass Condition |
 |---|---|---|---|---|
 | S1 | Sign in and reach dashboard | `/signin` -> `/dashboard` | <= 2 min | User reaches dashboard without facilitator instruction |
-| S2 | Connect BAND | `/dashboard` | <= 3 min | BAND status changes to Connected |
-| S3 | Read BAND post and comments | `/band` | <= 2 min | User selects band, post, and reads comments panel |
+| S2 | Confirm BAND waiting status (pending mode) | `/dashboard` | <= 1 min | User understands BAND is waiting for approval, not failed |
+| S3 | Open BAND page and read waiting guidance (pending mode) | `/band` | <= 1 min | User can explain what action is possible now (Drive/Mail first) |
 | S4 | Connect Google Drive | `/dashboard` or `/drive` | <= 3 min | Drive status changes to Connected |
 | S5 | Search Drive file | `/drive` | <= 2 min | User executes search and identifies one result |
 | S6 | Upload Drive file | `/drive` | <= 2 min | Upload success message appears and file shows in list |
@@ -62,7 +63,7 @@ Release rule:
 For each scenario, verify:
 
 1. Main action button is visually dominant and unique.
-2. Current status text is explicit (`Connected`, `Not connected`, `Reconnect required`, `Error`).
+2. Current status text is explicit (`연결 완료`, `미연결`, `재연결 필요`, `오류`, `심사중`).
 3. Error text includes next action.
 4. Focus ring is clearly visible with keyboard navigation.
 5. Form fields have explicit labels.

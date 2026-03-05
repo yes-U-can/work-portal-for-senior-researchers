@@ -8,7 +8,9 @@ export default function SignInPage() {
   return (
     <main className="page-shell narrow-main" id="main-content">
       <h1 className="page-title">로그인</h1>
-      <p className="page-subtitle">로그인 후 대시보드에서 BAND, Drive, 메일 연결을 순서대로 진행하세요.</p>
+      <p className="page-subtitle">
+        로그인 후 대시보드에서 Drive와 메일을 먼저 연결하세요. BAND는 심사 완료 후 연결 기능이 활성화됩니다.
+      </p>
       <SignInForm googleEnabled={googleEnabled} credentialsEnabled={credentialsEnabled} />
     </main>
   );

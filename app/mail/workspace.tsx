@@ -27,6 +27,11 @@ type MailMessageDetail = MailMessageSummary & {
 
 type MailTab = "GMAIL" | "NAVER_MAIL";
 
+type ErrorPayload = {
+  error?: string;
+  recoveryAction?: string;
+};
+
 function statusClass(status: IntegrationStatusResponse | null) {
   if (!status || !status.connected) {
     return "state-pending";
@@ -52,7 +57,15 @@ function statusLabel(status: IntegrationStatusResponse | null) {
     return "재연결 필요";
   }
 
-  return status.status;
+  return "오류";
+}
+
+function readError(payload: unknown, fallbackError: string, fallbackRecoveryAction: string) {
+  const parsed = payload as ErrorPayload;
+  return {
+    error: parsed?.error || fallbackError,
+    recoveryAction: parsed?.recoveryAction || fallbackRecoveryAction
+  };
 }
 
 export default function MailWorkspace() {
@@ -68,6 +81,7 @@ export default function MailWorkspace() {
   const [naverEmail, setNaverEmail] = useState("");
   const [naverAppPassword, setNaverAppPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorRecoveryAction, setErrorRecoveryAction] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
   const currentStatus = useMemo(
@@ -84,10 +98,26 @@ export default function MailWorkspace() {
 
     if (gmailResponse.ok) {
       setGmailStatus(gmailData);
+    } else {
+      const guidance = readError(
+        gmailData,
+        "Gmail 연결 상태를 확인하지 못했습니다.",
+        "잠시 후 다시 시도하거나 Gmail을 다시 연결하세요."
+      );
+      setError(guidance.error);
+      setErrorRecoveryAction(guidance.recoveryAction);
     }
 
     if (naverResponse.ok) {
       setNaverStatus(naverData);
+    } else {
+      const guidance = readError(
+        naverData,
+        "네이버메일 연결 상태를 확인하지 못했습니다.",
+        "잠시 후 다시 시도하거나 앱 비밀번호를 다시 입력하세요."
+      );
+      setError(guidance.error);
+      setErrorRecoveryAction(guidance.recoveryAction);
     }
   }
 
@@ -107,8 +137,14 @@ export default function MailWorkspace() {
     setLoadingDetail(false);
 
     if (!response.ok) {
+      const guidance = readError(
+        data,
+        "메일 상세를 불러오지 못했습니다.",
+        "목록 새로고침 후 다시 선택하세요."
+      );
       setSelectedMessage(null);
-      setError(data.error ?? "메일 상세를 불러오지 못했습니다.");
+      setError(guidance.error);
+      setErrorRecoveryAction(guidance.recoveryAction);
       return;
     }
 
@@ -119,6 +155,7 @@ export default function MailWorkspace() {
     async (tab: MailTab) => {
       setLoadingList(true);
       setError("");
+      setErrorRecoveryAction("");
       setSuccessMessage("");
       setSelectedMessageId("");
       setSelectedMessage(null);
@@ -132,8 +169,14 @@ export default function MailWorkspace() {
       setLoadingList(false);
 
       if (!response.ok) {
+        const guidance = readError(
+          data,
+          "메일 목록을 불러오지 못했습니다.",
+          "연결 상태를 확인한 뒤 목록 새로고침을 눌러주세요."
+        );
         setMessages([]);
-        setError(data.error ?? "메일 목록을 불러오지 못했습니다.");
+        setError(guidance.error);
+        setErrorRecoveryAction(guidance.recoveryAction);
         return;
       }
 
@@ -159,6 +202,7 @@ export default function MailWorkspace() {
     event.preventDefault();
     setConnectingNaver(true);
     setError("");
+    setErrorRecoveryAction("");
     setSuccessMessage("");
 
     const response = await fetch("/api/integrations/naver-mail/connect", {
@@ -175,7 +219,13 @@ export default function MailWorkspace() {
     setConnectingNaver(false);
 
     if (!response.ok) {
-      setError(data.error ?? "네이버메일 연결에 실패했습니다.");
+      const guidance = readError(
+        data,
+        "네이버메일 연결에 실패했습니다.",
+        "네이버 2단계 인증과 앱 비밀번호를 다시 확인하세요."
+      );
+      setError(guidance.error);
+      setErrorRecoveryAction(guidance.recoveryAction);
       return;
     }
 
@@ -192,7 +242,7 @@ export default function MailWorkspace() {
       <section className="surface-card">
         <div className="card-body section-stack">
           <h2 className="card-title">메일 제공자 선택</h2>
-          <p className="hint hint-strong">둘 중 하나만 먼저 연결해도 메일 확인을 시작할 수 있습니다.</p>
+          <p className="hint hint-strong">Gmail 또는 개인 네이버메일 중 하나만 먼저 연결해도 됩니다.</p>
           <div className="tab-row" role="tablist" aria-label="메일 제공자">
             <button
               className={`tab-button ${activeTab === "GMAIL" ? "tab-button-active" : ""}`}
@@ -239,9 +289,9 @@ export default function MailWorkspace() {
       ) : (
         <section className="surface-card">
           <div className="card-body section-stack">
-            <h2 className="card-title">개인 네이버메일 연결(IMAP)</h2>
+            <h2 className="card-title">개인 네이버메일 연결 (IMAP)</h2>
             <p className="hint">
-              네이버 2단계 인증 + 앱 비밀번호가 필요합니다. 일반 비밀번호는 사용할 수 없습니다.
+              네이버 2단계 인증을 켠 뒤 앱 비밀번호를 만들어 입력하세요. 일반 비밀번호로는 연결되지 않습니다.
             </p>
             <form className="form-grid" onSubmit={onConnectNaver}>
               <label className="form-label" htmlFor="naver-email">
@@ -341,6 +391,7 @@ export default function MailWorkspace() {
 
       <div className="live-region" aria-live="polite" role="status">
         {error ? <p className="error-text">{error}</p> : null}
+        {errorRecoveryAction ? <p className="hint hint-recovery">{errorRecoveryAction}</p> : null}
         {successMessage ? <p className="success-text">{successMessage}</p> : null}
       </div>
     </div>
