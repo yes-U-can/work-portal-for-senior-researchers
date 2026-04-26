@@ -16,6 +16,9 @@ CREATE TYPE "SitePostCategory" AS ENUM ('GENERAL', 'WORKSHOP', 'COUNSELING', 'GR
 -- CreateEnum
 CREATE TYPE "SiteContentVisibility" AS ENUM ('PUBLIC', 'INTERNAL', 'DRAFT');
 
+-- CreateEnum
+CREATE TYPE "SiteAssistantKind" AS ENUM ('GPTS', 'GEMINI_GEMS');
+
 -- CreateTable
 CREATE TABLE "Tenant" (
     "id" TEXT NOT NULL,
@@ -175,6 +178,25 @@ CREATE TABLE "WorkshopSchedule" (
     CONSTRAINT "WorkshopSchedule_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "SiteAssistantLink" (
+    "id" TEXT NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "authorUserId" TEXT,
+    "kind" "SiteAssistantKind" NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "url" TEXT NOT NULL,
+    "glyph" TEXT NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 100,
+    "visibility" "SiteContentVisibility" NOT NULL DEFAULT 'PUBLIC',
+    "deletedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SiteAssistantLink_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Tenant_slug_key" ON "Tenant"("slug");
 
@@ -235,6 +257,12 @@ CREATE INDEX "WorkshopSchedule_tenantId_deletedAt_workshopStartsAt_idx" ON "Work
 -- CreateIndex
 CREATE INDEX "WorkshopSchedule_tenantId_updatedAt_idx" ON "WorkshopSchedule"("tenantId", "updatedAt");
 
+-- CreateIndex
+CREATE INDEX "SiteAssistantLink_tenantId_kind_visibility_idx" ON "SiteAssistantLink"("tenantId", "kind", "visibility");
+
+-- CreateIndex
+CREATE INDEX "SiteAssistantLink_tenantId_deletedAt_sortOrder_idx" ON "SiteAssistantLink"("tenantId", "deletedAt", "sortOrder");
+
 -- AddForeignKey
 ALTER TABLE "Membership" ADD CONSTRAINT "Membership_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -279,3 +307,9 @@ ALTER TABLE "WorkshopSchedule" ADD CONSTRAINT "WorkshopSchedule_tenantId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "WorkshopSchedule" ADD CONSTRAINT "WorkshopSchedule_authorUserId_fkey" FOREIGN KEY ("authorUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SiteAssistantLink" ADD CONSTRAINT "SiteAssistantLink_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SiteAssistantLink" ADD CONSTRAINT "SiteAssistantLink_authorUserId_fkey" FOREIGN KEY ("authorUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;

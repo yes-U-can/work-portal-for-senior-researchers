@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { SiteContentVisibility, SitePostCategory } from "@prisma/client";
+import { SiteAssistantKind, SiteContentVisibility, SitePostCategory } from "@prisma/client";
 import { AttachmentUploader } from "@/app/site-admin/attachment-uploader";
 import { DraftAutosave } from "@/app/site-admin/draft-autosave";
 import { RichTextEditor } from "@/app/site-admin/rich-text-editor";
@@ -8,15 +8,20 @@ import {
   createSitePostAction,
   createSiteResourceAction,
   createWorkshopScheduleAction,
+  createAssistantLinkAction,
+  permanentlyDeleteAssistantLinkAction,
   permanentlyDeleteSitePostAction,
   permanentlyDeleteSiteResourceAction,
   permanentlyDeleteWorkshopScheduleAction,
+  restoreAssistantLinkAction,
   restoreSitePostAction,
   restoreSiteResourceAction,
   restoreWorkshopScheduleAction,
+  softDeleteAssistantLinkAction,
   softDeleteSitePostAction,
   softDeleteSiteResourceAction,
   softDeleteWorkshopScheduleAction,
+  updateAssistantLinkAction,
   updateAuthorProfileAction,
   updateSiteResourceAction,
   updateWorkshopScheduleAction
@@ -25,6 +30,7 @@ import { resolveSiteAdminAccess } from "@/lib/site-admin/access";
 import {
   sitePostCategoryLabels,
   sitePostLabelOptions,
+  siteAssistantKindLabels,
   siteVisibilityLabels,
   siteWorkshopOptions
 } from "@/lib/site-admin/constants";
@@ -60,6 +66,11 @@ const messageLabels: Record<string, string> = {
   "schedule-deleted": "워크숍 일정을 휴지통으로 보냈습니다.",
   "schedule-restored": "워크숍 일정을 복구했습니다.",
   "schedule-hard-deleted": "워크숍 일정을 완전히 삭제했습니다.",
+  "assistant-created": "AI 챗봇 링크 배지를 저장했습니다.",
+  "assistant-updated": "AI 챗봇 링크 배지를 수정했습니다.",
+  "assistant-deleted": "AI 챗봇 링크 배지를 휴지통으로 보냈습니다.",
+  "assistant-restored": "AI 챗봇 링크 배지를 복구했습니다.",
+  "assistant-hard-deleted": "AI 챗봇 링크 배지를 완전히 삭제했습니다.",
   "profile-updated": "작성자 표시명을 저장했습니다."
 };
 
@@ -67,6 +78,7 @@ const errorLabels: Record<string, string> = {
   "post-permission": "이 공지글을 수정하거나 삭제할 권한이 없습니다.",
   "resource-permission": "이 자료 링크를 삭제할 권한이 없습니다.",
   "schedule-permission": "워크숍 일정을 수정하거나 삭제할 권한이 없습니다.",
+  "assistant-permission": "AI 챗봇 링크 관리는 관리자 계정만 사용할 수 있습니다.",
   "hard-delete-permission": "완전삭제는 관리자 계정만 사용할 수 있습니다."
 };
 
@@ -127,6 +139,10 @@ export default async function SiteAdminPage({ searchParams }: SiteAdminPageProps
         <article className="metric-card">
           <p className="metric-label">워크숍 일정</p>
           <p className="metric-value">{overview.stats.schedulesCount}</p>
+        </article>
+        <article className="metric-card">
+          <p className="metric-label">AI 링크</p>
+          <p className="metric-value">{overview.stats.assistantLinksCount}</p>
         </article>
         <article className="metric-card">
           <p className="metric-label">휴지통</p>
@@ -487,6 +503,167 @@ export default async function SiteAdminPage({ searchParams }: SiteAdminPageProps
           </div>
         </article>
 
+        {access.canManageSystemSettings ? (
+          <article className="surface-card">
+            <div className="card-body section-stack">
+              <h2 className="card-title">AI 챗봇 링크 배지 관리</h2>
+              <p className="hint">
+                공개 사이트 자료실에 노출되는 GPTs/Gems 링크트리입니다. 이 영역은 관리자 계정만 추가, 수정, 삭제할 수 있습니다.
+              </p>
+              <form className="form-grid" action={createAssistantLinkAction}>
+                <div className="form-row">
+                  <label className="form-label">
+                    종류
+                    <select className="select-input" name="assistantKind" defaultValue={SiteAssistantKind.GPTS}>
+                      {Object.entries(siteAssistantKindLabels).map(([value, label]) => (
+                        <option value={value} key={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="form-label">
+                    공개 범위
+                    <select className="select-input" name="assistantVisibility" defaultValue={SiteContentVisibility.PUBLIC}>
+                      {Object.entries(siteVisibilityLabels).map(([value, label]) => (
+                        <option value={value} key={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="form-row">
+                  <label className="form-label">
+                    배지 문자
+                    <input className="text-input" name="assistantGlyph" required maxLength={12} placeholder="예: GPT" />
+                  </label>
+                  <label className="form-label">
+                    정렬 순서
+                    <input className="text-input" name="assistantSortOrder" type="number" defaultValue={100} />
+                  </label>
+                </div>
+                <label className="form-label">
+                  제목
+                  <input className="text-input" name="assistantTitle" required maxLength={120} placeholder="예: SICP GPTs" />
+                </label>
+                <label className="form-label">
+                  링크
+                  <input className="text-input" name="assistantUrl" type="url" required placeholder="https://chatgpt.com/g/..." />
+                </label>
+                <label className="form-label">
+                  설명
+                  <textarea className="text-area text-area-small" name="assistantDescription" rows={3} />
+                </label>
+                <button className="button" type="submit">
+                  AI 링크 저장
+                </button>
+              </form>
+
+              <div className="admin-list">
+                {overview.assistantLinks.map((assistantLink) => (
+                  <article className="item-card" key={assistantLink.id}>
+                    <div>
+                      <p className="item-title">{assistantLink.title}</p>
+                      <p className="item-subtitle">
+                        {siteAssistantKindLabels[assistantLink.kind]} · {siteVisibilityLabels[assistantLink.visibility]} · 정렬{" "}
+                        {assistantLink.sortOrder}
+                      </p>
+                      <p className="item-snippet">{assistantLink.url}</p>
+                    </div>
+                    <details className="inline-edit">
+                      <summary>수정 열기</summary>
+                      <form className="form-grid" action={updateAssistantLinkAction}>
+                        <input type="hidden" name="id" value={assistantLink.id} />
+                        <div className="form-row">
+                          <label className="form-label">
+                            종류
+                            <select className="select-input" name="assistantKind" defaultValue={assistantLink.kind}>
+                              {Object.entries(siteAssistantKindLabels).map(([value, label]) => (
+                                <option value={value} key={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="form-label">
+                            공개 범위
+                            <select className="select-input" name="assistantVisibility" defaultValue={assistantLink.visibility}>
+                              {Object.entries(siteVisibilityLabels).map(([value, label]) => (
+                                <option value={value} key={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                        <div className="form-row">
+                          <label className="form-label">
+                            배지 문자
+                            <input
+                              className="text-input"
+                              name="assistantGlyph"
+                              required
+                              maxLength={12}
+                              defaultValue={assistantLink.glyph}
+                            />
+                          </label>
+                          <label className="form-label">
+                            정렬 순서
+                            <input
+                              className="text-input"
+                              name="assistantSortOrder"
+                              type="number"
+                              defaultValue={assistantLink.sortOrder}
+                            />
+                          </label>
+                        </div>
+                        <label className="form-label">
+                          제목
+                          <input
+                            className="text-input"
+                            name="assistantTitle"
+                            required
+                            maxLength={120}
+                            defaultValue={assistantLink.title}
+                          />
+                        </label>
+                        <label className="form-label">
+                          링크
+                          <input className="text-input" name="assistantUrl" type="url" required defaultValue={assistantLink.url} />
+                        </label>
+                        <label className="form-label">
+                          설명
+                          <textarea
+                            className="text-area text-area-small"
+                            name="assistantDescription"
+                            rows={3}
+                            defaultValue={assistantLink.description ?? ""}
+                          />
+                        </label>
+                        <div className="actions-row">
+                          <button className="button" type="submit">
+                            AI 링크 수정 저장
+                          </button>
+                        </div>
+                      </form>
+                    </details>
+                    <div className="actions-row">
+                      <form action={softDeleteAssistantLinkAction}>
+                        <input type="hidden" name="id" value={assistantLink.id} />
+                        <button className="button-danger" type="submit">
+                          삭제
+                        </button>
+                      </form>
+                    </div>
+                  </article>
+                ))}
+                {overview.assistantLinks.length === 0 ? <p className="hint">아직 등록된 AI 챗봇 링크가 없습니다.</p> : null}
+              </div>
+            </div>
+          </article>
+        ) : null}
+
         <article className="surface-card">
           <div className="card-body section-stack">
             <h2 className="card-title">워크숍 일정 등록</h2>
@@ -780,7 +957,39 @@ export default async function SiteAdminPage({ searchParams }: SiteAdminPageProps
                 </article>
               ))}
 
-              {overview.deletedPosts.length + overview.deletedResources.length + overview.deletedSchedules.length === 0 ? (
+              {overview.deletedAssistantLinks.map((assistantLink) => (
+                <article className="item-card" key={assistantLink.id}>
+                  <div>
+                    <p className="item-title">AI 링크: {assistantLink.title}</p>
+                    <p className="item-subtitle">
+                      {siteAssistantKindLabels[assistantLink.kind]} · {siteVisibilityLabels[assistantLink.visibility]} · 정렬{" "}
+                      {assistantLink.sortOrder}
+                    </p>
+                  </div>
+                  <div className="actions-row">
+                    <form action={restoreAssistantLinkAction}>
+                      <input type="hidden" name="id" value={assistantLink.id} />
+                      <button className="button-secondary" type="submit">
+                        복구
+                      </button>
+                    </form>
+                    {access.canManageSystemSettings ? (
+                      <form action={permanentlyDeleteAssistantLinkAction}>
+                        <input type="hidden" name="id" value={assistantLink.id} />
+                        <button className="button-danger" type="submit">
+                          완전삭제
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+
+              {overview.deletedPosts.length +
+                overview.deletedResources.length +
+                overview.deletedSchedules.length +
+                overview.deletedAssistantLinks.length ===
+              0 ? (
                 <p className="hint">휴지통에 보관된 항목이 없습니다.</p>
               ) : null}
             </div>
@@ -908,6 +1117,11 @@ function auditActionLabel(action: string) {
     "workshop_schedule.soft_delete": "워크숍 일정 휴지통 이동",
     "workshop_schedule.restore": "워크숍 일정 복구",
     "workshop_schedule.permanent_delete": "워크숍 일정 완전삭제",
+    "assistant_link.create": "AI 챗봇 링크 작성",
+    "assistant_link.update": "AI 챗봇 링크 수정",
+    "assistant_link.soft_delete": "AI 챗봇 링크 휴지통 이동",
+    "assistant_link.restore": "AI 챗봇 링크 복구",
+    "assistant_link.permanent_delete": "AI 챗봇 링크 완전삭제",
     "author_profile.update": "작성자 표시명 수정"
   };
 

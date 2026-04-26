@@ -1,6 +1,6 @@
 "use server";
 
-import { SiteContentVisibility, SitePostCategory } from "@prisma/client";
+import { SiteAssistantKind, SiteContentVisibility, SitePostCategory } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -20,6 +20,7 @@ type LinkItem = {
 
 const validCategories = new Set(Object.values(SitePostCategory));
 const validVisibilities = new Set(Object.values(SiteContentVisibility));
+const validAssistantKinds = new Set(Object.values(SiteAssistantKind));
 const validWorkshopSlugs = new Set<string>(siteWorkshopOptions.map((workshop) => workshop.slug));
 const validLabels = new Set<string>(sitePostLabelOptions);
 
@@ -467,6 +468,141 @@ export async function permanentlyDeleteWorkshopScheduleAction(formData: FormData
   redirectWithMessage("schedule-hard-deleted");
 }
 
+export async function createAssistantLinkAction(formData: FormData) {
+  const access = await requireSiteAdminAccess();
+  requireSystemManager(access);
+
+  const assistantLink = await db.siteAssistantLink.create({
+    data: {
+      tenantId: access.tenant.tenantId,
+      authorUserId: access.appUserId,
+      kind: readEnum(formData, "assistantKind", validAssistantKinds, SiteAssistantKind.GPTS),
+      title: readRequiredString(formData, "assistantTitle"),
+      description: readOptionalString(formData, "assistantDescription"),
+      url: readRequiredHttpUrl(formData, "assistantUrl"),
+      glyph: readGlyph(formData),
+      sortOrder: readSortOrder(formData),
+      visibility: readEnum(formData, "assistantVisibility", validVisibilities, SiteContentVisibility.PUBLIC)
+    }
+  });
+  await recordSiteAdminAudit(access, {
+    action: "assistant_link.create",
+    resourceType: "SiteAssistantLink",
+    resourceId: assistantLink.id,
+    metaJson: { kind: assistantLink.kind }
+  });
+
+  revalidatePath("/site-admin");
+  redirectWithMessage("assistant-created");
+}
+
+export async function updateAssistantLinkAction(formData: FormData) {
+  const access = await requireSiteAdminAccess();
+  requireSystemManager(access);
+
+  const id = readRequiredString(formData, "id");
+  const assistantLink = await db.siteAssistantLink.findFirst({
+    where: {
+      id,
+      tenantId: access.tenant.tenantId,
+      deletedAt: null
+    }
+  });
+
+  if (!assistantLink) {
+    redirectWithError("assistant-permission");
+  }
+
+  await db.siteAssistantLink.update({
+    where: { id },
+    data: {
+      kind: readEnum(formData, "assistantKind", validAssistantKinds, SiteAssistantKind.GPTS),
+      title: readRequiredString(formData, "assistantTitle"),
+      description: readOptionalString(formData, "assistantDescription"),
+      url: readRequiredHttpUrl(formData, "assistantUrl"),
+      glyph: readGlyph(formData),
+      sortOrder: readSortOrder(formData),
+      visibility: readEnum(formData, "assistantVisibility", validVisibilities, SiteContentVisibility.PUBLIC)
+    }
+  });
+  await recordSiteAdminAudit(access, {
+    action: "assistant_link.update",
+    resourceType: "SiteAssistantLink",
+    resourceId: id
+  });
+
+  revalidatePath("/site-admin");
+  redirectWithMessage("assistant-updated");
+}
+
+export async function softDeleteAssistantLinkAction(formData: FormData) {
+  const access = await requireSiteAdminAccess();
+  requireSystemManager(access);
+
+  const id = readRequiredString(formData, "id");
+  await db.siteAssistantLink.updateMany({
+    where: {
+      id,
+      tenantId: access.tenant.tenantId,
+      deletedAt: null
+    },
+    data: { deletedAt: new Date() }
+  });
+  await recordSiteAdminAudit(access, {
+    action: "assistant_link.soft_delete",
+    resourceType: "SiteAssistantLink",
+    resourceId: id
+  });
+
+  revalidatePath("/site-admin");
+  redirectWithMessage("assistant-deleted");
+}
+
+export async function restoreAssistantLinkAction(formData: FormData) {
+  const access = await requireSiteAdminAccess();
+  requireSystemManager(access);
+
+  const id = readRequiredString(formData, "id");
+  await db.siteAssistantLink.updateMany({
+    where: {
+      id,
+      tenantId: access.tenant.tenantId,
+      deletedAt: { not: null }
+    },
+    data: { deletedAt: null }
+  });
+  await recordSiteAdminAudit(access, {
+    action: "assistant_link.restore",
+    resourceType: "SiteAssistantLink",
+    resourceId: id
+  });
+
+  revalidatePath("/site-admin");
+  redirectWithMessage("assistant-restored");
+}
+
+export async function permanentlyDeleteAssistantLinkAction(formData: FormData) {
+  const access = await requireSiteAdminAccess();
+  requireSystemManager(access);
+
+  const id = readRequiredString(formData, "id");
+  await db.siteAssistantLink.deleteMany({
+    where: {
+      id,
+      tenantId: access.tenant.tenantId,
+      deletedAt: { not: null }
+    }
+  });
+  await recordSiteAdminAudit(access, {
+    action: "assistant_link.permanent_delete",
+    resourceType: "SiteAssistantLink",
+    resourceId: id
+  });
+
+  revalidatePath("/site-admin");
+  redirectWithMessage("assistant-hard-deleted");
+}
+
 export async function updateAuthorProfileAction(formData: FormData) {
   const access = await requireSiteAdminAccess();
   const displayName = readRequiredString(formData, "displayName");
@@ -567,6 +703,21 @@ function readWorkshopScheduleDates(formData: FormData) {
     workshopStartsAt,
     workshopEndsAt
   };
+}
+
+function readGlyph(formData: FormData) {
+  return readRequiredString(formData, "assistantGlyph").slice(0, 12);
+}
+
+function readSortOrder(formData: FormData) {
+  const value = Number.parseInt(readOptionalString(formData, "assistantSortOrder") ?? "100", 10);
+  return Number.isFinite(value) ? value : 100;
+}
+
+function requireSystemManager(access: Awaited<ReturnType<typeof requireSiteAdminAccess>>) {
+  if (!access.canManageSystemSettings) {
+    redirectWithError("assistant-permission");
+  }
 }
 
 function parseLinkLines(value: string | null, limit: number): LinkItem[] {

@@ -46,6 +46,11 @@ enum SiteContentVisibility {
   DRAFT
 }
 
+enum SiteAssistantKind {
+  GPTS
+  GEMINI_GEMS
+}
+
 model Tenant {
   id                String               @id @default(uuid())
   name              String
@@ -59,6 +64,7 @@ model Tenant {
   siteResources     SiteResource[]
   workshopSchedules WorkshopSchedule[]
   authorProfiles    AuthorProfile[]
+  assistantLinks    SiteAssistantLink[]
 }
 
 model User {
@@ -73,6 +79,7 @@ model User {
   siteResources     SiteResource[]
   workshopSchedules WorkshopSchedule[]
   authorProfiles    AuthorProfile[]
+  assistantLinks    SiteAssistantLink[]
 }
 
 model Membership {
@@ -227,4 +234,25 @@ model WorkshopSchedule {
   @@index([tenantId, workshopSlug, visibility])
   @@index([tenantId, deletedAt, workshopStartsAt])
   @@index([tenantId, updatedAt])
+}
+
+model SiteAssistantLink {
+  id           String                @id @default(uuid())
+  tenantId     String
+  authorUserId String?
+  kind         SiteAssistantKind
+  title        String
+  description  String?
+  url          String
+  glyph        String
+  sortOrder    Int                   @default(100)
+  visibility   SiteContentVisibility @default(PUBLIC)
+  deletedAt    DateTime?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author       User?                 @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, kind, visibility])
+  @@index([tenantId, deletedAt, sortOrder])
 }

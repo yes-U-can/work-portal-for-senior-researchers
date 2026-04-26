@@ -1,4 +1,4 @@
-import { SiteContentVisibility, type WorkshopSchedule } from "@prisma/client";
+import { SiteContentVisibility, type SiteAssistantLink, type WorkshopSchedule } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { siteWorkshopOptions } from "@/lib/site-admin/constants";
@@ -33,11 +33,12 @@ export async function getPublicSiteContent() {
         applicationEndsAt: null,
         workshopStartsAt: null,
         workshopEndsAt: null
-      }))
+      })),
+      aiAssistants: []
     };
   }
 
-  const [notices, resources, schedules] = await Promise.all([
+  const [notices, resources, schedules, assistantLinks] = await Promise.all([
     db.sitePost.findMany({
       where: {
         tenantId: tenant.id,
@@ -73,6 +74,14 @@ export async function getPublicSiteContent() {
         visibility: SiteContentVisibility.PUBLIC
       },
       orderBy: [{ workshopStartsAt: "asc" }, { updatedAt: "desc" }]
+    }),
+    db.siteAssistantLink.findMany({
+      where: {
+        tenantId: tenant.id,
+        deletedAt: null,
+        visibility: SiteContentVisibility.PUBLIC
+      },
+      orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }]
     })
   ]);
 
@@ -109,6 +118,7 @@ export async function getPublicSiteContent() {
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString()
     })),
+    aiAssistants: assistantLinks.map(formatAssistantLink),
     schedules: schedules.map((schedule) => {
       const status = resolveWorkshopStatus(schedule);
 
@@ -143,6 +153,20 @@ export async function getPublicSiteContent() {
         workshopEndsAt: schedule?.workshopEndsAt?.toISOString() ?? null
       };
     })
+  };
+}
+
+function formatAssistantLink(link: SiteAssistantLink) {
+  return {
+    id: link.id,
+    kind: link.kind,
+    title: link.title,
+    description: link.description,
+    url: link.url,
+    glyph: link.glyph,
+    sortOrder: link.sortOrder,
+    createdAt: link.createdAt.toISOString(),
+    updatedAt: link.updatedAt.toISOString()
   };
 }
 

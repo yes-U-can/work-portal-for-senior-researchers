@@ -1,4 +1,4 @@
-import { SiteContentVisibility, SitePostCategory } from "@prisma/client";
+import { SiteAssistantKind, SiteContentVisibility, SitePostCategory } from "@prisma/client";
 
 export const sitePostCategoryLabels: Record<SitePostCategory, string> = {
   GENERAL: "연구소 전체 공지",
@@ -14,6 +14,11 @@ export const siteVisibilityLabels: Record<SiteContentVisibility, string> = {
 };
 
 export const sitePostLabelOptions = ["AI", "DSM", "MMPI", "Rorschach"] as const;
+
+export const siteAssistantKindLabels: Record<SiteAssistantKind, string> = {
+  GPTS: "GPTs",
+  GEMINI_GEMS: "Gemini Gems"
+};
 
 export const siteWorkshopOptions = [
   {

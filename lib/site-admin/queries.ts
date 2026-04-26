@@ -60,7 +60,18 @@ export async function getSiteAdminOverview(access: SiteAdminAccess, filters: Sit
   };
   const sortField = filters.sort === "created" ? "createdAt" : "updatedAt";
 
-  const [posts, deletedPosts, resources, deletedResources, schedules, deletedSchedules, profile, auditLogs] = await Promise.all([
+  const [
+    posts,
+    deletedPosts,
+    resources,
+    deletedResources,
+    schedules,
+    deletedSchedules,
+    assistantLinks,
+    deletedAssistantLinks,
+    profile,
+    auditLogs
+  ] = await Promise.all([
     db.sitePost.findMany({
       where: postWhere,
       orderBy: [{ isPinned: "desc" }, { [sortField]: "desc" }],
@@ -150,6 +161,47 @@ export async function getSiteAdminOverview(access: SiteAdminAccess, filters: Sit
         }
       }
     }),
+    db.siteAssistantLink.findMany({
+      where: {
+        tenantId: access.tenant.tenantId,
+        deletedAt: null
+      },
+      orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+      take: 30,
+      include: {
+        author: {
+          select: {
+            email: true,
+            authorProfiles: {
+              where: { tenantId: access.tenant.tenantId },
+              select: { displayName: true },
+              take: 1
+            }
+          }
+        }
+      }
+    }),
+    db.siteAssistantLink.findMany({
+      where: {
+        tenantId: access.tenant.tenantId,
+        deletedAt: { not: null },
+        ...(access.canManageSystemSettings ? {} : { id: "__restricted__" })
+      },
+      orderBy: { deletedAt: "desc" },
+      take: 20,
+      include: {
+        author: {
+          select: {
+            email: true,
+            authorProfiles: {
+              where: { tenantId: access.tenant.tenantId },
+              select: { displayName: true },
+              take: 1
+            }
+          }
+        }
+      }
+    }),
     db.authorProfile.findUnique({
       where: {
         tenantId_userId: {
@@ -162,7 +214,7 @@ export async function getSiteAdminOverview(access: SiteAdminAccess, filters: Sit
       where: {
         tenantId: access.tenant.tenantId,
         resourceType: {
-          in: ["SitePost", "SiteResource", "WorkshopSchedule", "AuthorProfile"]
+          in: ["SitePost", "SiteResource", "WorkshopSchedule", "SiteAssistantLink", "AuthorProfile"]
         }
       },
       orderBy: { createdAt: "desc" },
@@ -192,6 +244,8 @@ export async function getSiteAdminOverview(access: SiteAdminAccess, filters: Sit
     deletedResources,
     schedules,
     deletedSchedules,
+    assistantLinks,
+    deletedAssistantLinks,
     profile,
     auditLogs,
     stats: {
@@ -200,7 +254,8 @@ export async function getSiteAdminOverview(access: SiteAdminAccess, filters: Sit
       draftPostsCount,
       resourcesCount: resources.length,
       schedulesCount: schedules.length,
-      trashCount: deletedPosts.length + deletedResources.length + deletedSchedules.length
+      assistantLinksCount: assistantLinks.length,
+      trashCount: deletedPosts.length + deletedResources.length + deletedSchedules.length + deletedAssistantLinks.length
     }
   };
 }
