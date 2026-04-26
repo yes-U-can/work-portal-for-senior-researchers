@@ -3,7 +3,8 @@ import SignInForm from "./signin-form";
 
 export default function SignInPage() {
   const googleEnabled = Boolean(env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET);
-  const credentialsEnabled = !env.IS_PRODUCTION && Boolean(env.DEV_AUTH_EMAIL && env.DEV_AUTH_PASSWORD);
+  const credentialsEnabled =
+    !env.IS_PRODUCTION && env.ENABLE_DEV_CREDENTIALS && Boolean(env.DEV_AUTH_EMAIL && env.DEV_AUTH_PASSWORD);
 
   return (
     <main className="page-shell narrow-main" id="main-content">

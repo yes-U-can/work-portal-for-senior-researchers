@@ -149,6 +149,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <Link className="button-secondary" href="/accessibility-checklist">
             접근성 체크리스트
           </Link>
+          <Link className="button-secondary" href="/site-admin">
+            공개 사이트 관리
+          </Link>
           <Link className="button-secondary" href="/api/auth/signout">
             로그아웃
           </Link>

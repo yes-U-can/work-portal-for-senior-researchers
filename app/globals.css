@@ -224,6 +224,12 @@ code {
   gap: 12px;
 }
 
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
 .form-label {
   display: grid;
   gap: 8px;
@@ -248,6 +254,42 @@ code {
 .text-area {
   min-height: 130px;
   resize: vertical;
+}
+
+.text-area-small {
+  min-height: 92px;
+}
+
+.fieldset {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin: 0;
+  padding: 12px;
+}
+
+.fieldset legend {
+  color: var(--muted);
+  font-weight: 800;
+  padding: 0 6px;
+}
+
+.checkbox-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.checkbox-label input {
+  width: 20px;
+  height: 20px;
 }
 
 .hint {
@@ -348,6 +390,211 @@ code {
   background: #ffffff;
   padding: 13px;
   text-align: left;
+}
+
+.admin-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-list .item-card {
+  display: grid;
+  gap: 12px;
+}
+
+.upload-box {
+  border: 1px dashed #b8c4d6;
+  border-radius: 18px;
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.file-input {
+  border: 1px solid #d8dee9;
+  border-radius: 12px;
+  margin-top: 0.45rem;
+  padding: 0.75rem;
+  width: 100%;
+}
+
+.upload-list {
+  display: grid;
+  gap: 0.65rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.upload-list li {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.autosave-panel {
+  background: #f7f9fc;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+}
+
+kbd {
+  background: #ffffff;
+  border: 1px solid #c9d3e1;
+  border-radius: 6px;
+  box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.14);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.82em;
+  padding: 0.08rem 0.35rem;
+}
+
+.rich-editor {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.rich-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.rich-toolbar button,
+.rich-toolbar label {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 0.9rem;
+  font-weight: 800;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  padding: 0 0.8rem;
+}
+
+.rich-toolbar button {
+  cursor: pointer;
+}
+
+.rich-toolbar select {
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  max-width: 7rem;
+}
+
+.rich-file-button input {
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+.rich-editor-surface {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  min-height: 280px;
+  padding: 1rem;
+}
+
+.notice-rich-text {
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.notice-rich-text p {
+  margin: 0 0 1rem;
+}
+
+.notice-rich-text ul,
+.notice-rich-text ol {
+  margin: 0 0 1rem 1.35rem;
+  padding: 0;
+}
+
+.notice-rich-text img {
+  border-radius: 14px;
+  display: block;
+  height: auto;
+  margin: 1rem 0;
+  max-width: 100%;
+}
+
+.notice-rich-text a {
+  color: #154c9d;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.rt-font-sans {
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+.rt-font-serif {
+  font-family: "Noto Serif KR", serif;
+}
+
+.rt-size-sm {
+  font-size: 0.92em;
+}
+
+.rt-size-base {
+  font-size: 1em;
+}
+
+.rt-size-lg {
+  font-size: 1.16em;
+}
+
+.rt-size-xl {
+  font-size: 1.32em;
+}
+
+.rt-leading-tight {
+  line-height: 1.35;
+}
+
+.rt-leading-normal {
+  line-height: 1.75;
+}
+
+.rt-leading-loose {
+  line-height: 2.1;
+}
+
+.rt-tracking-tight {
+  letter-spacing: -0.02em;
+}
+
+.rt-tracking-normal {
+  letter-spacing: normal;
+}
+
+.rt-tracking-wide {
+  letter-spacing: 0.04em;
+}
+
+.inline-edit {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.inline-edit summary {
+  color: #154c9d;
+  cursor: pointer;
+  font-weight: 800;
 }
 
 .item-card-active {

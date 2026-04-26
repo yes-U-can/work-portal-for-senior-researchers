@@ -33,25 +33,46 @@ enum ActionResult {
   ERROR
 }
 
+enum SitePostCategory {
+  GENERAL
+  WORKSHOP
+  COUNSELING
+  GREEN_BOARD
+}
+
+enum SiteContentVisibility {
+  PUBLIC
+  INTERNAL
+  DRAFT
+}
+
 model Tenant {
-  id          String               @id @default(uuid())
-  name        String
-  slug        String               @unique
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  memberships Membership[]
-  accounts    IntegrationAccount[]
-  auditLogs   AuditLog[]
+  id                String               @id @default(uuid())
+  name              String
+  slug              String               @unique
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  memberships       Membership[]
+  accounts          IntegrationAccount[]
+  auditLogs         AuditLog[]
+  sitePosts         SitePost[]
+  siteResources     SiteResource[]
+  workshopSchedules WorkshopSchedule[]
+  authorProfiles    AuthorProfile[]
 }
 
 model User {
-  id          String       @id @default(uuid())
-  email       String       @unique
-  name        String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  memberships Membership[]
-  auditLogs   AuditLog[]
+  id                String             @id @default(uuid())
+  email             String             @unique
+  name              String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  memberships       Membership[]
+  auditLogs         AuditLog[]
+  sitePosts         SitePost[]
+  siteResources     SiteResource[]
+  workshopSchedules WorkshopSchedule[]
+  authorProfiles    AuthorProfile[]
 }
 
 model Membership {
@@ -85,15 +106,15 @@ model IntegrationAccount {
 }
 
 model IntegrationToken {
-  id                   String             @id @default(uuid())
-  integrationAccountId String
-  accessTokenEncrypted String
+  id                    String             @id @default(uuid())
+  integrationAccountId  String
+  accessTokenEncrypted  String
   refreshTokenEncrypted String?
-  expiresAt            DateTime?
-  scope                String?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  account              IntegrationAccount @relation(fields: [integrationAccountId], references: [id], onDelete: Cascade)
+  expiresAt             DateTime?
+  scope                 String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  account               IntegrationAccount @relation(fields: [integrationAccountId], references: [id], onDelete: Cascade)
 
   @@index([integrationAccountId])
 }
@@ -110,18 +131,100 @@ model SyncCursor {
 }
 
 model AuditLog {
-  id          String       @id @default(uuid())
-  tenantId    String
-  actorUserId String?
-  action      String
+  id           String       @id @default(uuid())
+  tenantId     String
+  actorUserId  String?
+  action       String
   resourceType String
-  resourceId  String?
-  result      ActionResult
-  metaJson    Json?
-  createdAt   DateTime     @default(now())
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  actorUser   User?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  resourceId   String?
+  result       ActionResult
+  metaJson     Json?
+  createdAt    DateTime     @default(now())
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorUser    User?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, createdAt])
   @@index([actorUserId, createdAt])
+}
+
+model AuthorProfile {
+  id          String   @id @default(uuid())
+  tenantId    String
+  userId      String
+  displayName String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, displayName])
+}
+
+model SitePost {
+  id           String                @id @default(uuid())
+  tenantId     String
+  authorUserId String?
+  title        String
+  body         String
+  category     SitePostCategory
+  labels       String[]              @default([])
+  visibility   SiteContentVisibility @default(DRAFT)
+  relatedLinks Json?
+  attachments  Json?
+  isPinned     Boolean               @default(false)
+  pinnedRank   Int?
+  deletedAt    DateTime?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author       User?                 @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, category, visibility])
+  @@index([tenantId, deletedAt, updatedAt])
+  @@index([tenantId, isPinned, pinnedRank])
+}
+
+model SiteResource {
+  id           String                @id @default(uuid())
+  tenantId     String
+  authorUserId String?
+  workshopSlug String
+  session      String
+  title        String
+  description  String?
+  url          String
+  visibility   SiteContentVisibility @default(PUBLIC)
+  deletedAt    DateTime?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author       User?                 @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, workshopSlug, visibility])
+  @@index([tenantId, deletedAt, updatedAt])
+}
+
+model WorkshopSchedule {
+  id                  String                @id @default(uuid())
+  tenantId            String
+  authorUserId        String?
+  workshopSlug        String
+  title               String
+  description         String?
+  applicationFormUrl  String?
+  applicationStartsAt DateTime?
+  applicationEndsAt   DateTime?
+  workshopStartsAt    DateTime
+  workshopEndsAt      DateTime?
+  visibility          SiteContentVisibility @default(PUBLIC)
+  deletedAt           DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  tenant              Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author              User?                 @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, workshopSlug, visibility])
+  @@index([tenantId, deletedAt, workshopStartsAt])
+  @@index([tenantId, updatedAt])
 }

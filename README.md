@@ -5,11 +5,12 @@ Senior-friendly work portal for integrating BAND, Google Drive, Gmail, and perso
 ## Current scope (M0-M3)
 
 - Next.js App Router foundation with Prisma multi-tenant schema
-- Auth.js sign-in page with Google sign-in and development credentials fallback
+- Auth.js sign-in page with Google sign-in. Development credentials are disabled by default and require `ENABLE_DEV_CREDENTIALS=true`.
 - BAND integration routes and workspace (connect/status/bands/posts/comments)
 - Google Drive integration routes and workspace (connect/status/files/upload)
 - Gmail integration routes and workspace (connect/status/messages/detail)
 - Personal Naver Mail IMAP integration routes and workspace (connect/status/messages/detail)
+- Public SICP website operations workspace (`/site-admin`) for notices, workshop settings, and workshop resource links
 
 ## 1) Install
 
@@ -36,6 +37,7 @@ Optional development values:
 
 - `DEV_AUTH_EMAIL`
 - `DEV_AUTH_PASSWORD`
+- `ENABLE_DEV_CREDENTIALS` (`false` by default; keep disabled unless a local-only fallback is needed)
 - `ACTIVE_TENANT_SLUG`
 - `DEV_AUTO_PROVISION`
 - `BAND_APP_REVIEW_STATUS` (`PENDING_REVIEW` | `AVAILABLE`, default: `PENDING_REVIEW`)
@@ -59,6 +61,10 @@ npm run db:generate
 npm run db:push
 ```
 
+Local development에서만 위 명령을 가볍게 사용합니다.
+
+운영 Neon 데이터베이스에 적용할 때는 먼저 스키마 diff를 확인하고, 적용 대상 DB가 맞는지 확인한 뒤 진행합니다. 실제 운영 DB 반영은 실수 비용이 크므로 이 프로젝트에서는 별도 승인 없이 실행하지 않습니다.
+
 ## 5) Run
 
 ```bash
@@ -73,8 +79,61 @@ Open:
 - BAND workspace: `http://localhost:3000/band`
 - Drive workspace: `http://localhost:3000/drive`
 - Mail workspace: `http://localhost:3000/mail`
+- Public site admin workspace: `http://localhost:3000/site-admin`
 - Accessibility checklist page: `http://localhost:3000/accessibility-checklist`
 - Health endpoint: `http://localhost:3000/api/health`
+
+## Public SICP site admin
+
+The `/site-admin` workspace is the internal operations area for content that will later feed the public Seoul Institute of Clinical Psychology website.
+
+Allowed Google accounts are hardcoded in `lib/site-admin/allowed-users.ts`.
+
+- `thinkinthegrey@gmail.com` -> `황성훈`
+- `loveyer@iscu.ac.kr` -> `김환`
+- `mow.coding@gmail.com` -> `관리자`
+- `sicpseoul@gmail.com` -> `관리자`
+
+Core permissions:
+
+- Only the allowed accounts can sign in.
+- All allowed accounts can create public-site notices, workshop resources, and workshop application settings.
+- `mow.coding@gmail.com` and `sicpseoul@gmail.com` can manage system-level fields such as calendar IDs and can edit/delete every public-site item.
+- Professor accounts can edit/delete their own posts and resources.
+- Deletes are soft deletes by default, so records are retained in the database.
+- Deleted posts and resources appear in the trash. Owners can restore their own deleted records, while manager accounts can permanently delete records.
+
+Content managed here:
+
+- Notices with category, labels, visibility, pinned state, sanitized rich text body, up to 3 related links, and up to 5 attachment link records.
+- Notice forms include browser-local autosave and `Ctrl+S` draft saving.
+- Workshop resource archive entries grouped by workshop and round/title.
+- Workshop application settings, including application form URL, application period, workshop event period, and auto-calculated display status.
+- Attachment uploads use Vercel Blob client uploads. Files are uploaded directly from the browser to Blob, then stored as public attachment URLs on the notice.
+- Admin lists support search, category/visibility/label filtering, workshop resource filtering, and created/updated sorting.
+- Important site-admin actions are recorded in the existing `AuditLog` table and shown in the recent operations list.
+
+Database note:
+
+- After schema changes, run `npm run db:generate`.
+- Syncing the schema to a real database requires an explicit migration or `npm run db:push` decision. Do not run destructive database changes casually.
+- After the database schema is synced, run `npm run db:seed-site-admin` once to create the tenant, memberships, and default author profiles for the four allowed accounts.
+- The seed keeps user-edited author display names intact when it is run again.
+
+Public read API:
+
+- `GET /api/public-site`
+- Returns only public, non-deleted notices and resources.
+- Returns workshop settings with an auto-calculated status: `OPEN`, `CLOSED`, `ENDED`, or `NO_SCHEDULE`.
+- The application form URL is exposed only while the workshop status is `OPEN`.
+
+Attachment storage:
+
+- Create and connect a Vercel Blob store to this Vercel project.
+- Ensure `BLOB_READ_WRITE_TOKEN` is available in the deployment environment.
+- Supported attachment extensions: `pdf`, `hwp`, `hwpx`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`.
+- Current upload limit is 5 files per notice and 30MB per file.
+- Body images are uploaded through the same Blob route and are limited to 10MB per image in the editor UI.
 
 ## Integration routes
 

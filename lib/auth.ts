@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { env } from "@/lib/env";
+import { isAllowedSiteAdminEmail } from "@/lib/site-admin/allowed-users";
 
 function buildProviders(): NextAuthOptions["providers"] {
   const providers: NextAuthOptions["providers"] = [];
@@ -16,7 +17,7 @@ function buildProviders(): NextAuthOptions["providers"] {
   }
 
   const devCredentialsEnabled =
-    !env.IS_PRODUCTION && Boolean(env.DEV_AUTH_EMAIL && env.DEV_AUTH_PASSWORD);
+    !env.IS_PRODUCTION && env.ENABLE_DEV_CREDENTIALS && Boolean(env.DEV_AUTH_EMAIL && env.DEV_AUTH_PASSWORD);
 
   if (devCredentialsEnabled) {
     providers.push(
@@ -60,6 +61,9 @@ export const authOptions: NextAuthOptions = {
     signIn: "/signin"
   },
   callbacks: {
+    async signIn({ user }) {
+      return isAllowedSiteAdminEmail(user.email);
+    },
     async jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
